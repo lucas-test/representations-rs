@@ -1,69 +1,150 @@
+// fn main() {
+//     let faces: Vec<Vec<i32>> = vec![
+//         vec![0,1,2,5],
+//         vec![0,1,3,4],
+//         vec![0,2,3,4],
+//         vec![1,2,3,4]
+//     ];
+
+//     let faces2: Vec<Vec<i32>> = vec![
+//         vec![0,1,2,6],
+//         vec![0,1,4,5],
+//         vec![0,1,4,6],
+//         vec![0,2,3,5],
+//         vec![0,2,5,6],
+//         vec![1,2,3,4],
+//         vec![1,2,3,6],
+//         vec![3,4,5]
+//     ];
+
+//     // let complex3: Vec<Vec<i32>> = vec![
+//     //     vec![0,1,3,6],
+//     //     vec![0,1,6,7],
+//     //     vec![0,2,3,7],
+//     //     vec![0,2,5,7],
+//     //     vec![0,3,4],
+//     //     vec![0,4,5,7],
+//     //     vec![1,2,3,5],
+//     //     vec![1,2,5,6],
+//     //     vec![1,3,4],
+//     //     vec![1,4,6,7],
+//     //     vec![2,3,4],
+//     //     vec![2,4,5,6],
+//     //     vec![4,5,6,7]
+//     // ];
+
+//     let complex3: Vec<Vec<i32>> = vec![
+//         vec![0,1,3,4],
+//         vec![0,1,3,6],
+//         vec![0,1,4,7],
+//         vec![0,1,6,7],
+//         vec![0,2,3,4],
+//         vec![0,2,3,7],
+//         vec![0,2,4,5],
+//         vec![0,2,5,7],
+//         vec![0,4,5,7],
+//         vec![1,2,3,4],
+//         vec![1,2,3,5],
+//         vec![1,2,4,6],
+//         vec![1,2,5,6],
+//         vec![1,4,6,7],
+//         vec![2,4,5,6],
+//         vec![4,5,6,7]
+//     ];
+
+//     // DM 5
+//     let complex4 = vec![
+//         vec![0,1,5,6],
+//         vec![0,2,4,6],
+//         vec![0,3,4,6],
+//         vec![1,2,4,5],
+//         vec![1,3,5,6],
+//         vec![2,3,4,5],
+//         vec![3,4,5,6]
+//     ];
+
+//     println!("{:?}", dushnik_miller_dim(complex3, 4, None));
+
+
+// }
+
+
+
+use std::collections::HashMap;
+use std::fs::File;
+use std::io::{BufRead, BufReader};
+use std::collections::HashSet;
+
+
 fn main() {
-    let faces: Vec<Vec<i32>> = vec![
-        vec![0,1,2,5],
-        vec![0,1,3,4],
-        vec![0,2,3,4],
-        vec![1,2,3,4]
-    ];
+    let args: Vec<String> = std::env::args().collect();
+    if args.len() != 3 {
+        eprintln!("Usage: {} <filepath> <number>", args[0]);
+        std::process::exit(1);
+    }
 
-    let faces2: Vec<Vec<i32>> = vec![
-        vec![0,1,2,6],
-        vec![0,1,4,5],
-        vec![0,1,4,6],
-        vec![0,2,3,5],
-        vec![0,2,5,6],
-        vec![1,2,3,4],
-        vec![1,2,3,6],
-        vec![3,4,5]
-    ];
+    let number_str = &args[2];
 
-    // let complex3: Vec<Vec<i32>> = vec![
-    //     vec![0,1,3,6],
-    //     vec![0,1,6,7],
-    //     vec![0,2,3,7],
-    //     vec![0,2,5,7],
-    //     vec![0,3,4],
-    //     vec![0,4,5,7],
-    //     vec![1,2,3,5],
-    //     vec![1,2,5,6],
-    //     vec![1,3,4],
-    //     vec![1,4,6,7],
-    //     vec![2,3,4],
-    //     vec![2,4,5,6],
-    //     vec![4,5,6,7]
-    // ];
+    // Parse the number
+    let dim: usize = match number_str.parse() {
+        Ok(num) => num,
+        Err(_) => {
+            eprintln!("Error: Invalid number argument");
+            std::process::exit(1);
+        }
+    };
 
-    let complex3: Vec<Vec<i32>> = vec![
-        vec![0,1,3,4],
-        vec![0,1,3,6],
-        vec![0,1,4,7],
-        vec![0,1,6,7],
-        vec![0,2,3,4],
-        vec![0,2,3,7],
-        vec![0,2,4,5],
-        vec![0,2,5,7],
-        vec![0,4,5,7],
-        vec![1,2,3,4],
-        vec![1,2,3,5],
-        vec![1,2,4,6],
-        vec![1,2,5,6],
-        vec![1,4,6,7],
-        vec![2,4,5,6],
-        vec![4,5,6,7]
-    ];
+    let file_path = &args[1];
+    let file = File::open(file_path).expect("Failed to open file");
+    let reader = BufReader::new(file);
 
-    // DM 5
-    let complex4 = vec![
-        vec![0,1,5,6],
-        vec![0,2,4,6],
-        vec![0,3,4,6],
-        vec![1,2,4,5],
-        vec![1,3,5,6],
-        vec![2,3,4,5],
-        vec![3,4,5,6]
-    ];
+    let mut data_map: HashMap<String, i32> = HashMap::new();
+    let mut reverse_data_map: HashMap<i32, String> = HashMap::new();
+    let mut facets = Vec::new();
+    let mut index = 0;
 
-    println!("{:?}", dushnik_miller_dim(complex3, 4, None));
+    // Parse the file
+    // Lines starting with a # are skipped
+    // Facets elements are separated by a space " "
+    for line in reader.lines() {
+        let line = line.unwrap();
+        if line.starts_with("#"){
+            continue;
+        }
+        let mut facet: Vec<i32> = Vec::new();
+        for s in line.split_whitespace() {
+            if let Some(id) = data_map.get(s) {
+                let id2: i32 = (*id).try_into().unwrap();
+                facet.push(id2);
+            } else {
+                data_map.insert(s.to_string(), index);
+                reverse_data_map.insert(index, s.to_string());
+                facet.push(index);
+                index += 1;
+            }
+        }
+        facets.push(facet);
+
+    }
+    println!("data_map: {data_map:?}");
+    println!("reverse: {reverse_data_map:?}");
+
+    if let Some(repre) = dushnik_miller_dim(facets, dim, None) {
+        println!("Dim {dim} OK");
+        println!("{repre:?}");
+        for line in repre {
+            for x in line {
+                if let Some(id) = reverse_data_map.get(&x) {
+                    print!("{id} ");
+                }
+            }
+            println!("");
+        }
+
+    } else {
+        println!("The complex is not of dimension {dim}");
+    }
+
 
 
 }
@@ -71,8 +152,6 @@ fn main() {
 
 
 
-
-use std::collections::HashSet;
 
 
 pub fn move_right(t: &mut [i32], i: usize, j: usize) {
